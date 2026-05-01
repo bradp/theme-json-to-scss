@@ -1,0 +1,22 @@
+{
+  "name": "theme-json-to-scss",
+  "version": "1.0.0",
+  "description": "Convert WordPress theme.json settings into SCSS variables.",
+  "bin": {
+    "theme-json-to-scss": "bin/theme-json-to-scss-variables.js",
+    "theme-json-to-scss-variables": "bin/theme-json-to-scss-variables.js"
+  },
+  "scripts": {
+    "test": "node test/convert.test.js"
+  },
+  "keywords": [
+    "wordpress",
+    "theme.json",
+    "scss",
+    "sass"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  }
+}
