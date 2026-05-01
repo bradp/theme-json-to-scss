@@ -14,6 +14,22 @@ You can also print to stdout:
 npx theme-json-to-scss theme.json --stdout
 ```
 
+Set a custom base font size for generated REM helper variables:
+
+```sh
+npx theme-json-to-scss theme.json --base-font-size 18px
+```
+
+Programmatic usage accepts the same option:
+
+```js
+const { convertThemeJsonToScss } = require("theme-json-to-scss");
+
+const scss = convertThemeJsonToScss(themeJson, {
+  baseFontSize: "18px",
+});
+```
+
 ## Generated Variables
 
 The CLI currently converts:
@@ -25,4 +41,4 @@ The CLI currently converts:
 - `settings.layout.wideSize` to `$content-wide`
 - `settings.custom` to `$<setting>`
 
-It also adds `$font-base: 16px;` for REM helper mixins.
+It also adds `$font-base: 16px;` for REM helper mixins, or the value passed with `--base-font-size`.

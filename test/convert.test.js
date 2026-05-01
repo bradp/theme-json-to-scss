@@ -1,6 +1,7 @@
 const assert = require("node:assert/strict");
 const {
   convertThemeJsonToScss,
+  parseArgs,
   toCustomVariableName,
   toScssVariableName,
 } = require("../bin/theme-json-to-scss-variables");
@@ -10,6 +11,8 @@ assert.equal(toScssVariableName("raider-black-light"), "raider-black-light");
 assert.equal(toScssVariableName("Myriad Pro"), "myriad-pro");
 assert.equal(toCustomVariableName("breakpoint-large"), "break-large");
 assert.equal(toCustomVariableName("breakpointXLarge"), "break-x-large");
+assert.equal(parseArgs(["theme.json", "--base-font-size", "18px"]).baseFontSize, "18px");
+assert.throws(() => parseArgs(["--base-font-size"]), /requires a font size/);
 
 const scss = convertThemeJsonToScss({
   settings: {
@@ -48,5 +51,17 @@ assert.match(scss, /\$content-wide: 1600px; \/\/ wide-size/);
 assert.match(scss, /\$break-large: 1025px;/);
 assert.doesNotMatch(scss, /\$breakpoint-large:/);
 assert.match(scss, /\$page-padding-sm: 20px;/);
+assert.match(scss, /\$font-base: 16px;/);
+
+const scssWithBaseFontSize = convertThemeJsonToScss(
+  {
+    settings: {},
+  },
+  {
+    baseFontSize: "18px",
+  }
+);
+
+assert.match(scssWithBaseFontSize, /\$font-base: 18px;/);
 
 console.log("All tests passed.");

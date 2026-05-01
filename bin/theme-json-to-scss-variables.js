@@ -16,11 +16,14 @@ Arguments:
 
 Options:
   -o, --output <file>  Write SCSS to a file.
+  --base-font-size <size>
+                      Set the $font-base value. Defaults to 16px.
   --stdout            Print SCSS to stdout.
   -h, --help          Show this help text.
 
 Examples:
   npx theme-json-to-scss theme.json src/scss/_theme-vars.scss
+  npx theme-json-to-scss theme.json --base-font-size 18px
   npx theme-json-to-scss theme.json --output src/scss/_theme-vars.scss
 `);
 }
@@ -30,6 +33,7 @@ function parseArgs(rawArgs) {
     input: null,
     output: null,
     stdout: false,
+    baseFontSize: "16px",
   };
 
   for (let index = 0; index < rawArgs.length; index += 1) {
@@ -51,6 +55,16 @@ function parseArgs(rawArgs) {
         throw new Error(`${arg} requires a file path.`);
       }
       parsed.output = output;
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--base-font-size") {
+      const baseFontSize = rawArgs[index + 1];
+      if (!baseFontSize) {
+        throw new Error(`${arg} requires a font size.`);
+      }
+      parsed.baseFontSize = baseFontSize;
       index += 1;
       continue;
     }
@@ -152,7 +166,8 @@ function addCustomSection(lines, custom) {
   }
 }
 
-function convertThemeJsonToScss(themeJson) {
+function convertThemeJsonToScss(themeJson, options = {}) {
+  const baseFontSize = options.baseFontSize || "16px";
   const settings = themeJson.settings || {};
   const typography = settings.typography || {};
   const color = settings.color || {};
@@ -187,7 +202,7 @@ function convertThemeJsonToScss(themeJson) {
 
   addLayoutSection(lines, settings.layout);
 
-  lines.push("", "// Base font size for site. Used in REM mixin calculations", "$font-base: 16px;");
+  lines.push("", "// Base font size for site. Used in REM mixin calculations", `$font-base: ${formatScssValue(baseFontSize)};`);
 
   addCustomSection(lines, settings.custom);
 
@@ -205,7 +220,9 @@ function main() {
   const inputPath = path.resolve(process.cwd(), options.input);
   const outputPath = options.output ? path.resolve(process.cwd(), options.output) : null;
   const themeJson = JSON.parse(fs.readFileSync(inputPath, "utf8"));
-  const scss = convertThemeJsonToScss(themeJson);
+  const scss = convertThemeJsonToScss(themeJson, {
+    baseFontSize: options.baseFontSize,
+  });
 
   if (outputPath && !options.stdout) {
     fs.mkdirSync(path.dirname(outputPath), { recursive: true });
@@ -227,6 +244,7 @@ if (require.main === module) {
 
 module.exports = {
   convertThemeJsonToScss,
+  parseArgs,
   toCustomVariableName,
   toScssVariableName,
 };
