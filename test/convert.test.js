@@ -28,6 +28,36 @@ const scss = convertThemeJsonToScss({
           slug: "black-to-mint",
         },
       ],
+      duotone: [
+        { colors: ["#000000", "#ffffff"], name: "Black and White", slug: "black-and-white" },
+      ],
+    },
+    spacing: {
+      spacingSizes: [
+        { name: "Small", size: "1rem", slug: "20" },
+      ],
+    },
+    shadow: {
+      presets: [
+        { name: "Natural", shadow: "6px 6px 9px rgba(0, 0, 0, 0.2)", slug: "natural" },
+      ],
+    },
+    dimensions: {
+      aspectRatios: [
+        { name: "Wide", ratio: "16/9", slug: "16-9" },
+      ],
+    },
+    myPlugin: {
+      zIndexes: [
+        { name: "Modal", value: 100, slug: "modal" },
+      ],
+    },
+    blocks: {
+      "core/button": {
+        color: {
+          palette: [{ color: "#ff0000", name: "Block Red", slug: "block-red" }],
+        },
+      },
     },
     typography: {
       fontFamilies: [
@@ -45,6 +75,14 @@ const scss = convertThemeJsonToScss({
     custom: {
       "breakpoint-large": "1025px",
       pagePaddingSm: "20px",
+      breakpoint: {
+        small: "600px",
+      },
+      spacing: {
+        gutter: {
+          default: "1.5rem",
+        },
+      },
     },
   },
 });
@@ -53,6 +91,15 @@ assert.match(scss, /\$color-raider-black: #000000;/);
 assert.match(scss, /\$color-mint-light-2: #daeec8;/);
 assert.match(scss, /\$gradient-black-to-mint: linear-gradient\(135deg, #000000 0%, #daeec8 100%\);/);
 assert.match(scss, /\/\/ Available as var\(--wp--preset--gradient--<slug>\)/);
+assert.match(scss, /\$duotone-black-and-white: \(#000000, #ffffff\);/);
+assert.match(scss, /\$spacing-20: 1rem;/);
+assert.match(scss, /\$shadow-natural: 6px 6px 9px rgba\(0, 0, 0, 0.2\);/);
+assert.match(scss, /\$aspect-ratio-16-9: 16\/9;/);
+assert.match(scss, /\/\/ Z Indexes\n\/\/ From settings\.myPlugin\.zIndexes/);
+assert.match(scss, /\$z-indexes-modal: 100;/);
+assert.doesNotMatch(scss, /block-red/);
+assert.match(scss, /\$break-small: 600px;/);
+assert.match(scss, /\$spacing-gutter-default: 1.5rem;/);
 assert.match(scss, /\$font-primary: 'museo-slab', serif;/);
 assert.match(scss, /\$font-size-body: 18px;/);
 assert.match(scss, /\$content-narrow: 890px; \/\/ content-size/);

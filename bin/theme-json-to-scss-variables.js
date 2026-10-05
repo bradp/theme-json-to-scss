@@ -96,9 +96,37 @@ function toScssVariableName(value) {
     .replace(/^-+|-+$/g, "");
 }
 
+// Known WordPress preset collections, keyed by their path under `settings`.
+// Any other array of `{ slug, ... }` objects is still converted, using names
+// derived from its key.
+const KNOWN_PRESETS = {
+  "color.palette": { title: "Color Palette", prefix: "color", cssName: "color", valueKey: "color" },
+  "color.gradients": { title: "Gradients", prefix: "gradient", cssName: "gradient", valueKey: "gradient" },
+  "color.duotone": { title: "Duotone", prefix: "duotone", cssName: "duotone", valueKey: "colors" },
+  "typography.fontFamilies": { title: "Font Families", prefix: "font", cssName: "font-family", valueKey: "fontFamily" },
+  "typography.fontSizes": { title: "Font Sizes", prefix: "font-size", cssName: "font-size", valueKey: "size" },
+  "spacing.spacingSizes": { title: "Spacing Sizes", prefix: "spacing", cssName: "spacing", valueKey: "size" },
+  "shadow.presets": { title: "Shadows", prefix: "shadow", cssName: "shadow", valueKey: "shadow" },
+  "dimensions.aspectRatios": { title: "Aspect Ratios", prefix: "aspect-ratio", cssName: "aspect-ratio", valueKey: "ratio" },
+  "border.radiusSizes": { title: "Border Radius Sizes", prefix: "radius", cssName: "border-radius", valueKey: "size" },
+};
+
+// Top-level settings that are handled separately or are not global presets.
+const SKIPPED_SETTINGS = new Set(["blocks", "custom", "layout"]);
+
+const PRESET_META_KEYS = new Set(["slug", "name"]);
+
+function isPrimitive(value) {
+  return typeof value === "string" || typeof value === "number" || typeof value === "boolean";
+}
+
 function formatScssValue(value) {
   if (typeof value === "number" || typeof value === "boolean") {
     return String(value);
+  }
+
+  if (Array.isArray(value) && value.every(isPrimitive)) {
+    return `(${value.map(formatScssValue).join(", ")})`;
   }
 
   if (typeof value !== "string") {
@@ -112,20 +140,85 @@ function toCustomVariableName(value) {
   return toScssVariableName(value).replace(/^breakpoint-/, "break-");
 }
 
-function addPresetSection(lines, title, cssVariablePattern, items, variablePrefix, valueKey) {
-  if (!Array.isArray(items) || items.length === 0) {
-    return;
+function isPresetList(value) {
+  return Array.isArray(value) && value.some((item) => item && typeof item === "object" && item.slug);
+}
+
+function collectPresetLists(node, pathParts = [], presetLists = []) {
+  if (!node || typeof node !== "object" || Array.isArray(node)) {
+    return presetLists;
   }
 
-  lines.push("", `// ${title}`, `// Available as ${cssVariablePattern}`);
-
-  for (const item of items) {
-    if (!item || !item.slug || item[valueKey] === undefined) {
+  for (const [key, value] of Object.entries(node)) {
+    if (pathParts.length === 0 && SKIPPED_SETTINGS.has(key)) {
       continue;
     }
 
-    lines.push(`$${variablePrefix}-${toScssVariableName(item.slug)}: ${formatScssValue(item[valueKey])};`);
+    const keyPath = [...pathParts, key];
+
+    if (isPresetList(value)) {
+      presetLists.push({ path: keyPath, items: value });
+    } else {
+      collectPresetLists(value, keyPath, presetLists);
+    }
   }
+
+  return presetLists;
+}
+
+function describePresetList(keyPath) {
+  const known = KNOWN_PRESETS[keyPath.join(".")];
+  if (known) {
+    return known;
+  }
+
+  const key = keyPath[keyPath.length - 1] === "presets" && keyPath.length > 1
+    ? keyPath[keyPath.length - 2]
+    : keyPath[keyPath.length - 1];
+  const prefix = toScssVariableName(key);
+  const title = prefix
+    .split("-")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+
+  return { title, prefix, source: `settings.${keyPath.join(".")}`, valueKey: null };
+}
+
+function getPresetValue(item, valueKey) {
+  if (valueKey && item[valueKey] !== undefined) {
+    return item[valueKey];
+  }
+
+  const entry = Object.entries(item).find(
+    ([key, value]) => !PRESET_META_KEYS.has(key) && (isPrimitive(value) || (Array.isArray(value) && value.every(isPrimitive)))
+  );
+
+  return entry ? entry[1] : undefined;
+}
+
+function addPresetSection(lines, keyPath, items) {
+  const { title, prefix, cssName, source, valueKey } = describePresetList(keyPath);
+  const variables = [];
+
+  for (const item of items) {
+    if (!item || !item.slug) {
+      continue;
+    }
+
+    const value = getPresetValue(item, valueKey);
+    if (value === undefined) {
+      continue;
+    }
+
+    variables.push(`$${prefix}-${toScssVariableName(item.slug)}: ${formatScssValue(value)};`);
+  }
+
+  if (variables.length === 0) {
+    return;
+  }
+
+  const note = cssName ? `// Available as var(--wp--preset--${cssName}--<slug>)` : `// From ${source}`;
+  lines.push("", `// ${title}`, note, ...variables);
 }
 
 function addLayoutSection(lines, layout) {
@@ -149,65 +242,44 @@ function addLayoutSection(lines, layout) {
   }
 }
 
+function flattenCustomSettings(value, pathParts = [], entries = []) {
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    for (const [key, child] of Object.entries(value)) {
+      flattenCustomSettings(child, [...pathParts, key], entries);
+    }
+  } else if (value !== undefined && value !== null && pathParts.length > 0) {
+    entries.push([pathParts, value]);
+  }
+
+  return entries;
+}
+
 function addCustomSection(lines, custom) {
   if (!custom || typeof custom !== "object" || Array.isArray(custom)) {
     return;
   }
 
-  const entries = Object.entries(custom).filter(([, value]) => value !== undefined && value !== null);
+  const entries = flattenCustomSettings(custom);
   if (entries.length === 0) {
     return;
   }
 
   lines.push("", "// Custom Settings", "// Available as var(--wp--custom--<setting>)");
 
-  for (const [key, value] of entries) {
-    lines.push(`$${toCustomVariableName(key)}: ${formatScssValue(value)};`);
+  for (const [keyPath, value] of entries) {
+    const name = keyPath.map(toScssVariableName).join("-");
+    lines.push(`$${toCustomVariableName(name)}: ${formatScssValue(value)};`);
   }
 }
 
 function convertThemeJsonToScss(themeJson, options = {}) {
   const baseFontSize = options.baseFontSize || "16px";
   const settings = themeJson.settings || {};
-  const typography = settings.typography || {};
-  const color = settings.color || {};
   const lines = ["// This file is auto-generated from theme.json - do not edit directly."];
 
-  addPresetSection(
-    lines,
-    "Color Palette",
-    "var(--wp--preset--color--<slug>)",
-    color.palette,
-    "color",
-    "color"
-  );
-
-  addPresetSection(
-    lines,
-    "Gradients",
-    "var(--wp--preset--gradient--<slug>)",
-    color.gradients,
-    "gradient",
-    "gradient"
-  );
-
-  addPresetSection(
-    lines,
-    "Font Families",
-    "var(--wp--preset--font-family--<slug>)",
-    typography.fontFamilies,
-    "font",
-    "fontFamily"
-  );
-
-  addPresetSection(
-    lines,
-    "Font Sizes",
-    "var(--wp--preset--font-size--<slug>)",
-    typography.fontSizes,
-    "font-size",
-    "size"
-  );
+  for (const { path: keyPath, items } of collectPresetLists(settings)) {
+    addPresetSection(lines, keyPath, items);
+  }
 
   addLayoutSection(lines, settings.layout);
 

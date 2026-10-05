@@ -32,14 +32,28 @@ const scss = convertThemeJsonToScss(themeJson, {
 
 ## Generated Variables
 
-The CLI currently converts:
+Every preset collection under `settings` (any array of objects with a `slug`) is converted to SCSS variables. WordPress core presets use these names:
 
-- `settings.color.palette` to `$color-<slug>`
-- `settings.color.gradients` to `$gradient-<slug>`
-- `settings.typography.fontFamilies` to `$font-<slug>`
-- `settings.typography.fontSizes` to `$font-size-<slug>`
+| theme.json setting | SCSS variable |
+| --- | --- |
+| `settings.color.palette` | `$color-<slug>` |
+| `settings.color.gradients` | `$gradient-<slug>` |
+| `settings.color.duotone` | `$duotone-<slug>` (a SCSS list of colors) |
+| `settings.typography.fontFamilies` | `$font-<slug>` |
+| `settings.typography.fontSizes` | `$font-size-<slug>` |
+| `settings.spacing.spacingSizes` | `$spacing-<slug>` |
+| `settings.shadow.presets` | `$shadow-<slug>` |
+| `settings.dimensions.aspectRatios` | `$aspect-ratio-<slug>` |
+| `settings.border.radiusSizes` | `$radius-<slug>` |
+
+Other preset collections are named after their key, e.g. `settings.myPlugin.zIndexes` becomes `$z-indexes-<slug>`.
+
+It also converts:
+
 - `settings.layout.contentSize` to `$content-narrow`
 - `settings.layout.wideSize` to `$content-wide`
-- `settings.custom` to `$<setting>`
+- `settings.custom` to `$<setting>`, with nested objects flattened (`custom.spacing.gutter` becomes `$spacing-gutter`)
+
+Block-level settings under `settings.blocks` are skipped.
 
 It also adds `$font-base: 16px;` for REM helper mixins, or the value passed with `--base-font-size`.
