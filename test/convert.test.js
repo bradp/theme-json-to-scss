@@ -21,6 +21,13 @@ const scss = convertThemeJsonToScss({
         { color: "#000000", name: "Raider Black", slug: "raider-black" },
         { color: "#daeec8", name: "Mint - Light 2", slug: "mint-light-2" },
       ],
+      gradients: [
+        {
+          gradient: "linear-gradient(135deg, #000000 0%, #daeec8 100%)",
+          name: "Black to Mint",
+          slug: "black-to-mint",
+        },
+      ],
     },
     typography: {
       fontFamilies: [
@@ -44,6 +51,8 @@ const scss = convertThemeJsonToScss({
 
 assert.match(scss, /\$color-raider-black: #000000;/);
 assert.match(scss, /\$color-mint-light-2: #daeec8;/);
+assert.match(scss, /\$gradient-black-to-mint: linear-gradient\(135deg, #000000 0%, #daeec8 100%\);/);
+assert.match(scss, /\/\/ Available as var\(--wp--preset--gradient--<slug>\)/);
 assert.match(scss, /\$font-primary: 'museo-slab', serif;/);
 assert.match(scss, /\$font-size-body: 18px;/);
 assert.match(scss, /\$content-narrow: 890px; \/\/ content-size/);

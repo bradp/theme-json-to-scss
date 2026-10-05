@@ -35,6 +35,7 @@ const scss = convertThemeJsonToScss(themeJson, {
 The CLI currently converts:
 
 - `settings.color.palette` to `$color-<slug>`
+- `settings.color.gradients` to `$gradient-<slug>`
 - `settings.typography.fontFamilies` to `$font-<slug>`
 - `settings.typography.fontSizes` to `$font-size-<slug>`
 - `settings.layout.contentSize` to `$content-narrow`

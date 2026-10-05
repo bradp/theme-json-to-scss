@@ -184,6 +184,15 @@ function convertThemeJsonToScss(themeJson, options = {}) {
 
   addPresetSection(
     lines,
+    "Gradients",
+    "var(--wp--preset--gradient--<slug>)",
+    color.gradients,
+    "gradient",
+    "gradient"
+  );
+
+  addPresetSection(
+    lines,
     "Font Families",
     "var(--wp--preset--font-family--<slug>)",
     typography.fontFamilies,
